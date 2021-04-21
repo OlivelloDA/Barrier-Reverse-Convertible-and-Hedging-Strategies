@@ -36,11 +36,11 @@ end
 %Calibration Heston Characteristic function parameters
 
 %define initial parameters(Rouah, 2013) 2*kappa*eta > theta^2(FellerCondition)
-sigma0 = 0.1927;
-kappa = 0.3369;
-eta = 0.0746;
-theta = 0.0551; %higher than benchmark
-rho = -1.0; %it should be between -1;1 so choose value in the middle
+sigma0 = 0.7;
+kappa = 0.2;
+eta = 20;
+theta = 0.30; %higher than benchmark
+rho = -0.1; %it should be between -1;1 so choose value in the middle
 
 %algorithm that optimizes the difference between the market price and the
 %heston model price , giving upper and lower bound for every parameter
@@ -54,10 +54,12 @@ Beq = [];
 ub = [Inf,Inf,Inf,Inf,+1];
 lb = [0,0,0,0,-1];
 
-set  =  fmincon(@(X)rmse_Heston(X,S0,K,r,q,T,market_price,flag),x0,A,B,Aeq,Beq,lb,ub);
+[error,fval]  =  fmincon(@(X)rmse_Heston(X,S0,K,r,q,T,market_price,flag),x0,A,B,Aeq,Beq,lb,ub);
 %the only values that changes are those linked to X
 disp(set)
-first = [0.0079 , 0.1803 , 0.0044 , 2.7473 , -0.2549]
+
+
+second = [ 0.0553 ,   0.0181 , 167.6502   , 9.8462   , 0.9975,     0.8273]
 
 
 % check the characteristic function

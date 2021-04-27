@@ -35,11 +35,11 @@ end
 %Calibration Heston Characteristic function parameters
 
 %define initial parameters(Rouah, 2013) 2*kappa*eta > theta^2(FellerCondition)
-sigma0 = 0.3;
-kappa = 0.2;
-eta = 3;
-theta = 0.7; %higher than benchmark
-rho = 0.5; %it should be between -1;1 so choose value in the middle
+sigma0 = 0.4;
+kappa = 0.5;
+eta = 10;
+theta = 0.8; %higher than benchmark
+rho = 0.8; %it should be between -1;1 so choose value in the middle
 
 %algorithm that optimizes the difference between the market price and the
 %heston model price , giving upper and lower bound for every parameter
@@ -59,12 +59,18 @@ lb = [0,0,0,0,-1];
 disp(error)
 disp(fval)
 
-first = [ 0.0605  ,  1.3936  , 10.0472  ,  4.7013 ,   0.5737 ,    1.8547e-05]
-second = [0.2089   ,  0.1007   ,  1.0297  ,  0.4468  , -0.6557,   6.3826e-05]
-third = [ 0.0356  ,   0.0738,    4.8792,   0.7911 ,  -0.0195,    3.0330e-05]
-fourth = [  0.1355 ,   0.0837  ,  2.8938  ,  0.8324 ,  0.3967,    2.4504e-05]
-
-
+first = [ 0.0733  ,  0.0064  , 20.0375 ,  14.2177 ,  -0.8748 ,    1.0172]
+second = [0.0008  ,  0.0000  ,  0.1600  ,  1.7356   -0.0007, 0.8486]
+third = [ 0.0218 ,   1.4321,    0.0047,   10.9414 ,  -0.1959,    0.9032]
+fourth = [ 0.0003 ,   2.7402  ,  0.0000  ,  9.8846 ,  -0.4353,    0.5044]
+fifth = [ 0.0003 ,   2.9443 ,   0.0000 ,  10.1639 ,  -0.3495 , 0.5044]
+sixth = [ 0.0004  ,  2.8214  ,  0.0000 ,  10.3130 ,  -0.4659, 0.5044]
+seventh = [ 0.0307 ,   1.4029 ,  2.5744 ,  10.2138  ,  0.8666, 6.4685e-05]
+%calculated with absmse
+absmse1 = [ 0.1628  ,  1.4085  ,  0.5674  ,  3.8560 ,  -0.0666,   14.0954]
+absmse2 = [ 0.1266  ,  9.2436  ,  0.0966  ,  1.2504 ,  -0.9435,   14.0607]
+absmse3 = [ 0.1257  , 11.9691  ,  0.0960  ,  1.9452 ,  -0.7833    ,  14.0644]
+absme4 =  [0.2027    0.1475    9.6616    8.7906   -0.4555,   14.1056]
 
 sigma_opt = 0.0605 ;
 kappa =  1.3936 ;
@@ -92,33 +98,7 @@ xlabel('K')
 ylabel('Price')
 title('Calibration: Heston')
 legend('Heston Price','Market Price','Market')
-disp(['RMSE: ' num2str(sqrt(sum((model_price-market_price)).^2)/length(market_price))]);
 
-% Monte Carlo properties
-m=100000;        % number of price paths
-n=T_exotic_day;  % number of time steps: 47
-dt = 1/365;      % length of time step (daily)
-
-
-S = zeros(m,n+1);
-Z = normrnd(0,1,m,n); % sample random numbers
-S(:,1) = S0;
-
-% fill the matrix with Formula (1)
-for j=2:n+1
-    S(:,j) = S(:,j-1).*exp((r_exotic-q-0.5*sigma^2)*dt + sigma*sqrt(dt)*Z(:,j-1));
-end
-
-
-% a) Asian call option
-mean_S = mean(S,2); % mean of the stock price along each sample path
-AC_dp = exp(-r_exotic*T_exotic).*max(mean_S-K_exotic, 0);
-AC = mean(AC_dp)
-
-% b) barrier options
-UIBP_dp = exp(-r_exotic*T_exotic).*max((max(S,[],2)-H)./abs(max(S,[],2)-H), 0).*max(K_exotic-S(:,n+1),0);
-UIBP = mean(UIBP_dp)
-
-UOBP_dp = exp(-r_exotic*T_exotic).*max((H - max(S,[],2))./abs(H - max(S,[],2)), 0).*max(K_exotic-S(:,n+1),0);
-UOBP = mean(UOBP_dp)
+disp(['RMSE: ' num2str(sqrt(sum((model_price-market_price)).^2)/length(market_price));
+disp(mean(market_price))
 

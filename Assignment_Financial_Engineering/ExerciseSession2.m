@@ -42,5 +42,5 @@ rho = -0.75;
 % check the characteristic function
 heston_characteristic(r,q,kappa,eta,theta,rho,sigma0,S0,1,1)
 
-Heston_FFT(kappa, eta, theta, rho, sigma0, K, T, S0, r, q, 0, 0) % rectangular rule
-Heston_FFT(kappa, eta, theta, rho, sigma0, K, T, S0, r, q, 0, 1) % Simpson's rule
+Heston_FFT(kappa, eta, theta, rho, sigma0, K, T, S0, r, q, 0) % rectangular rule
+Heston_FFT(kappa, eta, theta, rho, sigma0, K, T, S0, r, q, 0) % Simpson's rule

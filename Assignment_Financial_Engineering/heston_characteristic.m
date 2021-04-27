@@ -5,7 +5,7 @@ g = (kappa-rho*theta*u*1i-d)./(kappa-rho*theta*u*1i+d);
 
 p1 = 1i.*u.*(log(S0)+(r-q).*t);
 p2 =  eta.*kappa .*theta^(-2).*((kappa-rho*theta*u*1i-d).*t - ...
-    2*log((1-g.*exp(-d*t))./(1-g)));
+    2.*log((1-g.*exp(-d.*t))./(1-g)));
 p3 = sigma0^2*theta^(-2).*(kappa-rho*theta*u*1i - d).*...
     (1- exp(-d*t))./(1-g.*exp(-d*t));
 

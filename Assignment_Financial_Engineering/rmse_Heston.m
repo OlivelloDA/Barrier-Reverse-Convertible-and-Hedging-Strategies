@@ -23,7 +23,7 @@ for i=1:length(market_price)
 end
 
 % RMSE for a set of parameters applied to all the options market prices
-out = sqrt(sum( model_price - market_price)/length(market_price));
+out = sqrt((sum( model_price - market_price))/length(market_price));
 
 end
 

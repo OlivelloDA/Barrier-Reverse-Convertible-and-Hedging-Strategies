@@ -1,6 +1,6 @@
 clear all; clc;
 
-options = xlsread('Option_chain_15102021', 'options');
+options = xlsread('Option_chain_15102021', 'options_cleaned');
 stock = xlsread('Option_chain_15102021', 'Stock');
 interest_rate = xlsread('Option_chain_15102021', 'interest_rate');
 
@@ -35,10 +35,10 @@ end
 %Calibration Heston Characteristic function parameters
 
 %define initial parameters(Rouah, 2013) 2*kappa*eta > theta^2(FellerCondition)
-sigma0 = 0.3;
-kappa = 0.2;
-eta = 3;
-theta = 0.7; %higher than benchmark
+sigma0 = 0.2;
+kappa = 0.3;
+eta = 0.2;
+theta = 0.4; %higher than benchmark
 rho = 0.5; %it should be between -1;1 so choose value in the middle
 
 %algorithm that optimizes the difference between the market price and the
@@ -66,11 +66,11 @@ fourth = [  0.1355 ,   0.0837  ,  2.8938  ,  0.8324 ,  0.3967,    2.4504e-05]
 
 
 
-sigma_opt = 0.0605 ;
-kappa =  1.3936 ;
-eta = 10.0472 ;
-theta = 4.7013; %higher than benchmark
-rho = 0.5737;
+sigma_opt = 0.2195 ;
+kappa =  0.3744   ;
+eta = 0.4124  ;
+theta =  0.6422; %higher than benchmark
+rho =   0.0014;
 
 model_price = zeros(length(market_price),1)
 for i=1:length(market_price)
@@ -94,31 +94,73 @@ title('Calibration: Heston')
 legend('Heston Price','Market Price','Market')
 disp(['RMSE: ' num2str(sqrt(sum((model_price-market_price)).^2)/length(market_price))]);
 
-% Monte Carlo properties
-m=100000;        % number of price paths
-n=T_exotic_day;  % number of time steps: 47
-dt = 1/365;      % length of time step (daily)
+% Monte Carlo properties : Reverse convertible at 1 year Maturity
 
-
+n = 129; % since the maturity is at 188 days --> 196 trading days , made through a proportion consideting 365 gg and 250 trading days
+dt = 1/n;  
+m=50000;
+T_exotic = 188/365
+K_exotic = S0;
+r_maturity = 0.000401829858818408; %already multiplied for the T_exotic
+H = 0.9*S0;
+K_reverse = S0 ;
 S = zeros(m,n+1);
-Z = normrnd(0,1,m,n); % sample random numbers
+v = zeros(m,n+1);
 S(:,1) = S0;
+v(:,1) = sigma_opt^2;
 
-% fill the matrix with Formula (1)
+% generate correlated random numbers
+eps = normrnd(0,1,m,n);
+epsS = normrnd(0,1,m,n);
+eps1 = eps; 
+eps2 = eps*rho + sqrt(1-rho^2)*epsS;
+
+% simulate price paths according to Heston model
+
 for j=2:n+1
-    S(:,j) = S(:,j-1).*exp((r_exotic-q-0.5*sigma^2)*dt + sigma*sqrt(dt)*Z(:,j-1));
+        S(:,j) = S(:,j-1).*(1+(r_maturity-q)*dt+sqrt(v(:,j-1))*sqrt(dt).*eps1(:,j-1));
+        v(:,j) = abs(v(:,j-1)+(kappa*(eta-v(:,j-1)))*dt+theta*sqrt(v(:,j-1))*...
+            sqrt(dt).*eps2(:,j-1));  % reflection principle
+end
+figure()
+plot(S)
+%vanilla_call = exp(-r_maturity)*mean(max(S(:,end)-K_reverse,0))
+
+  
+% Price Down and out put barrier option
+
+DOBP_dp = exp(-r_maturity).*max((H - min(S,[],2))./abs(H - min(S,[],2)), 0).*max(K_exotic-S(:,n+1),0);
+DOBP = mean(DOBP_dp)
+
+%create indicator functions for BRC pricing
+S_TH = zeros(m,1);
+for j = 1:m+1
+  
+    if(S(j,n+1)<H)
+        S_TH(j,1) = 1
+    else 
+    S_TH(j,1) = 0
+    
+    end
+    
 end
 
+S_TS0 = zeros(m,1);
 
-% a) Asian call option
-mean_S = mean(S,2); % mean of the stock price along each sample path
-AC_dp = exp(-r_exotic*T_exotic).*max(mean_S-K_exotic, 0);
-AC = mean(AC_dp)
+for j = 1:m+1
+  
+    if(S(j,n+1)<S0)
+        S_TS0(j,1) = 1
+    else 
+    S_TS0(j,1) = 0
+    
+    end
+    
+end
 
-% b) barrier options
-UIBP_dp = exp(-r_exotic*T_exotic).*max((max(S,[],2)-H)./abs(max(S,[],2)-H), 0).*max(K_exotic-S(:,n+1),0);
-UIBP = mean(UIBP_dp)
+N = 1000
+n_put = 50
 
-UOBP_dp = exp(-r_exotic*T_exotic).*max((H - max(S,[],2))./abs(H - max(S,[],2)), 0).*max(K_exotic-S(:,n+1),0);
-UOBP = mean(UOBP_dp)
+payoff = mean(exp(-r_maturity)*(N+ n_put*DOBP_dp -n_put*(K_exotic-S(:,n+1)).*S_TH - N*S_TS0))
+cf = payoff/N
 

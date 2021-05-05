@@ -17,7 +17,7 @@ r_exotic = spline(interest_rate(:,1), interest_rate(:,2)/100, T_exotic_day);
 sigma=0.2228;
 
 % Monte Carlo properties
-m=100000;        % number of price paths
+m=1000;        % number of price paths
 n=T_exotic_day;  % number of time steps: 47
 dt = 1/365;      % length of time step (daily)
 

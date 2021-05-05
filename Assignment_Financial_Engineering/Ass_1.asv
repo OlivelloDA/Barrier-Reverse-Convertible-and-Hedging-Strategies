@@ -1,6 +1,6 @@
 clear all; clc;
 
-options = xlsread('Option_chain_15102021', 'options');
+options = xlsread('Option_chain_15102021', 'options_cleaned');
 stock = xlsread('Option_chain_15102021', 'Stock');
 interest_rate = xlsread('Option_chain_15102021', 'interest_rate');
 
@@ -35,11 +35,11 @@ end
 %Calibration Heston Characteristic function parameters
 
 %define initial parameters(Rouah, 2013) 2*kappa*eta > theta^2(FellerCondition)
-sigma0 = 0.4;
-kappa = 0.5;
-eta = 10;
-theta = 0.8; %higher than benchmark
-rho = 0.8; %it should be between -1;1 so choose value in the middle
+sigma0 = 0.1;
+kappa = 0.4;
+eta = 0.4;
+theta = 0.2; %higher than benchmark
+rho = -0.1; %it should be between -1;1 so choose value in the middle
 
 %algorithm that optimizes the difference between the market price and the
 %heston model price , giving upper and lower bound for every parameter
@@ -51,7 +51,7 @@ x0 = [sigma0,kappa,eta,theta,rho];
 Aeq = [];
 Beq = [];
 ub = [Inf,Inf,Inf,Inf,+1];
-lb = [0,0,0,0,-1];
+lb = [0.1,0.1,0.1,0.1,-1];
 %fval is the value of the objective function, so in this case the error
 %value
 [error,fval]  =  fmincon(@(X)rmse_Heston(X,S0,K,r,q,T,market_price,flag),x0,A,B,Aeq,Beq,lb,ub);
@@ -59,24 +59,18 @@ lb = [0,0,0,0,-1];
 disp(error)
 disp(fval)
 
-first = [ 0.0733  ,  0.0064  , 20.0375 ,  14.2177 ,  -0.8748 ,    1.0172]
-second = [0.0008  ,  0.0000  ,  0.1600  ,  1.7356   -0.0007, 0.8486]
-third = [ 0.0218 ,   1.4321,    0.0047,   10.9414 ,  -0.1959,    0.9032]
-fourth = [ 0.0003 ,   2.7402  ,  0.0000  ,  9.8846 ,  -0.4353,    0.5044]
-fifth = [ 0.0003 ,   2.9443 ,   0.0000 ,  10.1639 ,  -0.3495 , 0.5044]
-sixth = [ 0.0004  ,  2.8214  ,  0.0000 ,  10.3130 ,  -0.4659, 0.5044]
-seventh = [ 0.0307 ,   1.4029 ,  2.5744 ,  10.2138  ,  0.8666, 6.4685e-05]
-%calculated with absmse
-absmse1 = [ 0.1628  ,  1.4085  ,  0.5674  ,  3.8560 ,  -0.0666,   14.0954]
-absmse2 = [ 0.1266  ,  9.2436  ,  0.0966  ,  1.2504 ,  -0.9435,   14.0607]
-absmse3 = [ 0.1257  , 11.9691  ,  0.0960  ,  1.9452 ,  -0.7833    ,  14.0644]
-absme4 =  [0.2027    0.1475    9.6616    8.7906   -0.4555,   14.1056]
+first = [ 0.0605  ,  1.3936  , 10.0472  ,  4.7013 ,   0.5737 ,    1.8547e-05]
+second = [0.2089   ,  0.1007   ,  1.0297  ,  0.4468  , -0.6557,   6.3826e-05]
+third = [ 0.0356  ,   0.0738,    4.8792,   0.7911 ,  -0.0195,    3.0330e-05]
+fourth = [  0.1355 ,   0.0837  ,  2.8938  ,  0.8324 ,  0.3967,    2.4504e-05]
 
-sigma_opt = 0.0605 ;
-kappa =  1.3936 ;
-eta = 10.0472 ;
-theta = 4.7013; %higher than benchmark
-rho = 0.5737;
+
+
+sigma_opt = 0.2195 ;
+kappa =  0.3744   ;
+eta = 0.4124  ;
+theta =  0.6422; %higher than benchmark
+rho =   0.0014;
 
 model_price = zeros(length(market_price),1)
 for i=1:length(market_price)
@@ -98,7 +92,75 @@ xlabel('K')
 ylabel('Price')
 title('Calibration: Heston')
 legend('Heston Price','Market Price','Market')
+disp(['RMSE: ' num2str(sqrt(sum((model_price-market_price)).^2)/length(market_price))]);
 
-disp(['RMSE: ' num2str(sqrt(sum((model_price-market_price)).^2)/length(market_price));
-disp(mean(market_price))
+% Monte Carlo properties : Reverse convertible at 1 year Maturity
+
+n = 129; % since the maturity is at 188 days --> 196 trading days , made through a proportion consideting 365 gg and 250 trading days
+dt = 1/n;  
+m=50000;
+T_exotic = 188/365
+K_exotic = S0;
+r_maturity = 0.000401829858818408; %already multiplied for the T_exotic
+H = 0.9*S0;
+K_reverse = S0 ;
+S = zeros(m,n+1);
+v = zeros(m,n+1);
+S(:,1) = S0;
+v(:,1) = sigma_opt^2;
+
+% generate correlated random numbers
+eps = normrnd(0,1,m,n);
+epsS = normrnd(0,1,m,n);
+eps1 = eps; 
+eps2 = eps*rho + sqrt(1-rho^2)*epsS;
+
+% simulate price paths according to Heston model
+
+for j=2:n+1
+        S(:,j) = S(:,j-1).*(1+(r_maturity-q)*dt+sqrt(v(:,j-1))*sqrt(dt).*eps1(:,j-1));
+        v(:,j) = abs(v(:,j-1)+(kappa*(eta-v(:,j-1)))*dt+theta*sqrt(v(:,j-1))*...
+            sqrt(dt).*eps2(:,j-1));  % reflection principle
+end
+figure()
+plot(S)
+%vanilla_call = exp(-r_maturity)*mean(max(S(:,end)-K_reverse,0))
+
+  
+% Price Down and out put barrier option
+
+DOBP_dp = exp(-r_maturity).*max((H - min(S,[],2))./abs(H - min(S,[],2)), 0).*max(K_exotic-S(:,n+1),0);
+DOBP = mean(DOBP_dp)
+
+%create indicator functions for BRC pricing
+S_TH = zeros(m,1);
+for j = 1:m+1
+  
+    if(S(j,n+1)<H)
+        S_TH(j,1) = 1
+    else 
+    S_TH(j,1) = 0
+    
+    end
+    
+end
+
+S_TS0 = zeros(m,1);
+
+for j = 1:m+1
+  
+    if(S(j,n+1)<S0)
+        S_TS0(j,1) = 1
+    else 
+    S_TS0(j,1) = 0
+    
+    end
+    
+end
+
+N = 1000
+n_put = 100
+
+payoff = mean(exp(-r_maturity)*(N+ n_put*DOBP_dp -n_put*(K_exotic-S(:,n+1)).*S_TH - N*S_TS0))
+cf = payoff/N
 

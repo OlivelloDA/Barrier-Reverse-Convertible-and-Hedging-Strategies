@@ -35,11 +35,11 @@ end
 %Calibration Heston Characteristic function parameters
 
 %define initial parameters(Rouah, 2013) 2*kappa*eta > theta^2(FellerCondition)
-sigma0 = 0.2;
-kappa = 0.3;
-eta = 0.2;
-theta = 0.4; %higher than benchmark
-rho = 0.5; %it should be between -1;1 so choose value in the middle
+sigma0 = 0.15;
+kappa = 0.1;
+eta = 0.1;
+theta = 0.1; %higher than benchmark
+rho = 0.4; %it should be between -1;1 so choose value in the middle
 
 %algorithm that optimizes the difference between the market price and the
 %heston model price , giving upper and lower bound for every parameter
@@ -51,7 +51,7 @@ x0 = [sigma0,kappa,eta,theta,rho];
 Aeq = [];
 Beq = [];
 ub = [Inf,Inf,Inf,Inf,+1];
-lb = [0,0,0,0,-1];
+lb = [0.1,0.1,0.1,0.1,-1];
 %fval is the value of the objective function, so in this case the error
 %value
 [error,fval]  =  fmincon(@(X)rmse_Heston(X,S0,K,r,q,T,market_price,flag),x0,A,B,Aeq,Beq,lb,ub);
@@ -59,10 +59,10 @@ lb = [0,0,0,0,-1];
 disp(error)
 disp(fval)
 
-first = [ 0.0605  ,  1.3936  , 10.0472  ,  4.7013 ,   0.5737 ,    1.8547e-05]
-second = [0.2089   ,  0.1007   ,  1.0297  ,  0.4468  , -0.6557,   6.3826e-05]
-third = [ 0.0356  ,   0.0738,    4.8792,   0.7911 ,  -0.0195,    3.0330e-05]
-fourth = [  0.1355 ,   0.0837  ,  2.8938  ,  0.8324 ,  0.3967,    2.4504e-05]
+first = [   0.2020 ,  10.9242 ,   0.0840  ,  1.5515  ,  0.0135  ,  0.2191]
+second = [0.3824  , 93.0843  ,  0.1252  , 59.6410 ,  -0.0092 , 0.4850]
+third = [  0.2115    ,4.7020    ,0.1000    ,1.0439   , 0.0034  ,  0.2237]
+
 
 
 
@@ -98,11 +98,11 @@ disp(['RMSE: ' num2str(sqrt(sum((model_price-market_price)).^2)/length(market_pr
 
 n = 129; % since the maturity is at 188 days --> 196 trading days , made through a proportion consideting 365 gg and 250 trading days
 dt = 1/n;  
-m=50000;
+m=10000;
 T_exotic = 188/365
 K_exotic = S0;
 r_maturity = 0.000401829858818408; %already multiplied for the T_exotic
-H = 0.9*S0;
+H = 0.85*S0;
 K_reverse = S0 ;
 S = zeros(m,n+1);
 v = zeros(m,n+1);
@@ -130,11 +130,14 @@ plot(S)
 % Price Down and out put barrier option
 
 DOBP_dp = exp(-r_maturity).*max((H - min(S,[],2))./abs(H - min(S,[],2)), 0).*max(K_exotic-S(:,n+1),0);
-DOBP = mean(DOBP_dp)
+f = min(S,[],2)
+
+%DOBP = mean(DOBP_dp)
+%median(DOBP_dp)
 
 %create indicator functions for BRC pricing
 S_TH = zeros(m,1);
-for j = 1:m+1
+for j = 1:m
   
     if(S(j,n+1)<H)
         S_TH(j,1) = 1
@@ -147,20 +150,44 @@ end
 
 S_TS0 = zeros(m,1);
 
-for j = 1:m+1
+for j = 1:m
   
-    if(S(j,n+1)<S0)
+    if(S(j,n+1)>S0)
         S_TS0(j,1) = 1
     else 
-    S_TS0(j,1) = 0
+    S_TS0(j,1) = S(j,n+1)/S0
     
     end
     
 end
 
 N = 1000
-n_put = 50
+n_put = 500
+c = 0.08
+f = 0.03
 
-payoff = mean(exp(-r_maturity)*(N+ n_put*DOBP_dp -n_put*(K_exotic-S(:,n+1)).*S_TH - N*S_TS0))
-cf = payoff/N
+y = exp(-r_maturity)*(-n_put*(K_exotic-S(:,n+1)).*S_TH - N.*S_TS0)+N+ n_put*DOBP_dp
+price = exp(-r_maturity)*(-n_put*(K_exotic-S(:,n+1)).*S_TH - N.*S_TS0 - N*(c+f))+N+ n_put*DOBP_dp
 
+
+
+%remove a specific number(N in this case, means the option has price zero) from the array
+%so I 
+val =price(6)
+price = price(find(price~=val));
+cf = price/N
+
+q = quantile(cf,0.05)
+boxplot(cf)
+
+%HEDGING
+%selling option
+%using the money of the selling + borrowing money from the bank
+%buy stocks for hedging
+
+%we want to evaluate the option prices for every time step, the maturity
+%changes at every time step. At the same time the stock changes in price,
+%so the DELTA(t0,S0) value has changed in DELTA(t1,S1) and so I have to rebalance my portfolio.
+%the cash flow coming from the rebalancing, is used to adjust the bank
+%account. Assumes there are no "frctions" in rebalancing, no bid-ask
+%spread, and buying/sell stuff at the same moment

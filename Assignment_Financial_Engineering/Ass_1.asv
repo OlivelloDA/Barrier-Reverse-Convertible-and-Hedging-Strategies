@@ -99,7 +99,7 @@ disp(['RMSE: ' num2str(sqrt(sum((model_price-market_price)).^2)/length(market_pr
 n = 129; % since the maturity is at 188 days --> 196 trading days , made through a proportion consideting 365 gg and 250 trading days
 dt = 1/n;
 rng('default')  %set the seed to let the simulations be consistent for delta 
-m=20000;
+m=1000;
 T_exotic = 188/365
 K_exotic = S0;
 r_maturity = 0.000401829858818408; %already multiplied for the T_exotic
@@ -196,10 +196,5 @@ t = exp(-r_maturity)*mean(price)
 % which is related to your 2nd approach you compute the two prices in the numerator with 
 % your Monte Carlo pricer. Make sure to obtain a stable approximation by fixing the seed of the 
 % random numbers in the Monte Carlo simulation.
-h = 0.55
-S0 = 136
-P1 = 999.0214
-S0 = 134.95
-P2 = 999.2228
 
-Delta = (P1 - P2)/(2*h)
+S0 = 136

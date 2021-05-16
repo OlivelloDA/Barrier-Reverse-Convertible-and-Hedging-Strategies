@@ -63,7 +63,11 @@ first = [   0.2020 ,  10.9242 ,   0.0840  ,  1.5515  ,  0.0135  ,  0.2191]
 second = [0.3824  , 93.0843  ,  0.1252  , 59.6410 ,  -0.0092 , 0.4850]
 third = [  0.2115    ,4.7020    ,0.1000    ,1.0439   , 0.0034  ,  0.2237]
 
-
+sigma_opt = 0.2020 ;
+kappa =  10.9242   ;
+eta = 0.0840  ;
+theta =  1.5515; %higher than benchmark
+rho =   0.0135;
 
 
 sigma_opt = 0.2195 ;
@@ -99,7 +103,7 @@ disp(['RMSE: ' num2str(sqrt(sum((model_price-market_price)).^2)/length(market_pr
 n = 129; % since the maturity is at 188 days --> 196 trading days , made through a proportion consideting 365 gg and 250 trading days
 dt = 1/n;
 rng('default')  %set the seed to let the simulations be consistent for delta 
-m=20000;
+m=50000;
 T_exotic = 188/365
 K_exotic = S0;
 r_maturity = 0.000401829858818408; %already multiplied for the T_exotic
